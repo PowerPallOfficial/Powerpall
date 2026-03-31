@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PowerPal Official</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    
+    <style>
+        :root { --green: #0ecb81; --dark: #121212; --card: #1e1e1e; }
+        body { background: var(--dark); color: white; font-family: sans-serif; margin: 0; padding-bottom: 80px; overflow-x: hidden; }
+        #auth-screen { position: fixed; inset: 0; background: var(--dark); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
+        input { width: 100%; padding: 15px; background: #262626; border: 1px solid #333; border-radius: 12px; color: white; margin-bottom: 15px; box-sizing: border-box; font-size: 16px; }
+        .btn-main { width: 100%; padding: 16px; background: var(--green); border: none; border-radius: 12px; font-weight: bold; color: #000; cursor: pointer; font-size: 16px; }
+        .nav { position: fixed; bottom: 0; width: 100%; background: #181818; height: 70px; display: flex; border-top: 1px solid #333; z-index: 900; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: #888; text-decoration: none; cursor: pointer; }
+        .nav-item.active { color: var(--green); }
+        .page { display: none; padding: 20px; animation: slideIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes slideIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .balance-card { background: var(--card); border-radius: 20px; padding: 25px; border: 1px solid #333; margin-bottom: 20px; text-align: center; }
+        .shop-card { background: white; border-radius: 15px; margin-bottom: 15px; overflow: hidden; color: #111; border: 1px solid #ddd; }
+        .shop-head { background: var(--green); color: black; padding: 10px 15px; font-weight: bold; display: flex; justify-content: space-between; }
+        .shop-body { padding: 15px; display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+        .info-box { background: #f0f0f0; padding: 8px; border-radius: 8px; font-size: 12px; border: 1px solid #ddd; flex: 1; text-align: center; }
+        .info-box span { color: var(--green); font-weight: bold; display: block; font-size: 14px; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1100; padding: 20px; align-items: center; justify-content: center; }
+        .modal-content { background: var(--card); padding: 25px; border-radius: 20px; width: 100%; text-align: center; border: 1px solid var(--green); }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen">
+        <h1 style="color: var(--green); font-size: 42px; margin-bottom: 5px;">PowerPal</h1>
+        <p style="color: #888; margin-bottom: 30px;">Влезте или се регистрирайте</p>
+        <input type="tel" id="phone" placeholder="Телефон (+359...)">
+        <input type="password" id="pass" placeholder="Парола">
+        <button class="btn-main" onclick="handleAuth()">ВХОД / РЕГИСТРАЦИЯ</button>
+    </div>
+
+    <div id="pages">
+        <div id="page-profile" class="page active">
+            <div class="balance-card">
+                <div style="font-size: 14px; color: #888; letter-spacing: 1px;">ТЕКУЩ БАЛАНС</div>
+                <div style="font-size: 45px; font-weight: 800; margin: 15px 0; color: white;">$ <span id="balance">0.00</span></div>
+                <button onclick="openModal()" class="btn-main" style="padding: 12px; font-size: 14px;">📥 ЗАРЕДИ БАЛАНС</button>
+            </div>
+            <div style="background: #262626; padding: 20px; border-radius: 15px; border-left: 5px solid var(--green);">
+                <div style="font-size: 15px; font-weight: bold;">💰 БОНУС $1.00 ЗА ВСЕКИ ПОКАНЕН!</div>
+                <div id="ref-link" style="font-size: 11px; color: #888; margin-top: 12px; background: #111; padding: 12px; border-radius: 8px; word-break: break-all; border: 1px dashed #444;">Линкът се генерира...</div>
+                <button onclick="copyLink()" style="background: #444; border: none; color: white; padding: 10px 20px; border-radius: 8px; margin-top: 12px; width: 100%; font-weight: bold;">Копирай Линк</button>
+            </div>
+        </div>
+
+        <div id="page-shop" class="page">
+            <h2 style="color: var(--green); margin-bottom: 20px;">Оборудване</h2>
+            <div class="shop-card">
+                <div class="shop-head"><span>1 Port (T1)</span> <span>$87.91</span></div>
+                <div class="shop-body">
+                    <div style="font-size: 35px;">⚡</div>
+                    <div class="info-box">Доход<span>$3.40/ден</span></div>
+                    <button onclick="window.location.href='https://t.me/powerpal_bulgaria'" style="background:#000; color:white; border:none; padding:12px 20px; border-radius:8px; font-weight:bold;">КУПИ</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-team" class="page">
+            <h2 style="color: var(--green); margin-bottom: 20px;">Моят Екип</h2>
+            <div class="balance-card">
+                <div style="font-size: 16px; color: #888;">Общо активни реферали</div>
+                <div id="team-count" style="font-size: 40px; font-weight: bold; color: var(--green); margin-top: 10px;">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav">
+        <div class="nav-item active" onclick="showPage('profile', this)"><span>👤 Профил</span></div>
+        <div class="nav-item" onclick="showPage('shop', this)"><span>🛍️ Магазин</span></div>
+        <div class="nav-item" onclick="showPage('team', this)"><span>👥 Екип</span></div>
+    </div>
+
+    <div id="pay-modal" class="modal">
+        <div class="modal-content">
+            <h3 style="color: var(--green); font-size: 24px;">Плащане</h3>
+            <p style="color: #ccc;">За да заредите баланса си, свържете се с администратора в Телеграм:</p>
+            <p style="background: #111; padding: 15px; border-radius: 10px; color: var(--green); font-weight: bold; font-size: 18px; margin: 20px 0; border: 1px solid #333;">@powerpal_bulgaria</p>
+            <button class="btn-main" onclick="closeModal()">ЗАТВОРИ</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCugN57R0Xm4Q-2g00aJ0-GxX95A8v07AA",
+            authDomain: "powerpall.firebaseapp.com",
+            projectId: "powerpall",
+            databaseURL: "https://powerpall-default-rtdb.europe-west1.firebasedatabase.app",
+            appId: "1:334776969049:web:7dd2593654b445e75f8e48"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        function handleAuth() {
+            const phone = document.getElementById('phone').value.trim().replace(/\D/g,'');
+            const pass = document.getElementById('pass').value.trim();
+            if (phone.length < 9 || pass.length < 4) return alert("Моля, въведете валиден номер и парола!");
+
+            const refParam = new URLSearchParams(window.location.search).get('ref');
+            const userRef = db.ref('users/' + phone);
+
+            userRef.once('value', snap => {
+                if (!snap.exists()) {
+                    const myCode = Math.random().toString(36).substring(2, 8);
+                    const userData = { phone, pass, balance: 0, refCode: myCode, invitedBy: refParam || null, team: 0 };
+                    userRef.set(userData).then(() => { 
+                        if (refParam) giveBonus(refParam); 
+                        startApp(phone, userData); 
+                    });
+                } else {
+                    if (snap.val().pass === pass) startApp(phone, snap.val());
+                    else alert("Грешна парола за този номер!");
+                }
+            });
+        }
+
+        function giveBonus(code) {
+            db.ref('users').orderByChild('refCode').equalTo(code).once('value', snap => {
+                if (snap.exists()) {
+                    const id = Object.keys(snap.val())[0];
+                    const inviter = snap.val()[id];
+                    db.ref('users/' + id).update({ 
+                        balance: (inviter.balance || 0) + 1.00, 
+                        team: (inviter.team || 0) + 1 
+                    });
+                }
+            });
+        }
+
+        function startApp(id, data) {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('ref-link').innerText = window.location.origin + window.location.pathname + "?ref=" + data.refCode;
+            db.ref('users/' + id).on('value', snap => {
+                const val = snap.val();
+                document.getElementById('balance').innerText = val.balance.toFixed(2);
+                document.getElementById('team-count').innerText = val.team || 0;
+            });
+        }
+
+        function showPage(p, el) {
+            document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+            document.getElementById('page-'+p).classList.add('active');
+            el.classList.add('active');
+        }
+
+        function copyLink() {
+            const link = document.getElementById('ref-link').innerText;
+            navigator.clipboard.writeText(link).then(() => alert("Линкът за покана е копиран!"));
+        }
+
+        function openModal() { document.getElementById('pay-modal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('pay-modal').style.display = 'none'; }
+    </script>
+</body>
+</html>
