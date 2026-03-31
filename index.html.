@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerPal Official</title>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <style>
+        body { background: #121212; color: white; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
+        .card { background: #1e1e1e; padding: 25px; border-radius: 20px; border: 1px solid #0ecb81; margin-top: 50px; }
+        input { width: 90%; padding: 15px; margin: 10px 0; border-radius: 10px; border: none; background: #262626; color: white; font-size: 16px; }
+        .btn { width: 95%; padding: 15px; background: #0ecb81; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        #app { display: none; }
+        .shop-item { background: white; color: black; padding: 15px; border-radius: 15px; margin-top: 20px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+
+    <div id="login">
+        <h1 style="color: #0ecb81;">PowerPal</h1>
+        <div class="card">
+            <p>Влезте с телефон</p>
+            <input type="tel" id="phone" placeholder="08XXXXXXXX">
+            <input type="password" id="pass" placeholder="Парола">
+            <button class="btn" onclick="login()">ВХОД / РЕГИСТРАЦИЯ</button>
+        </div>
+    </div>
+
+    <div id="app">
+        <div class="card">
+            <small>БАЛАНС</small>
+            <h1 id="bal">$0.00</h1>
+            <button class="btn" onclick="window.location.href='https://t.me/powerpal_bulgaria'">📥 ЗАРЕДИ ПАРИ</button>
+        </div>
+
+        <div class="shop-item">
+            <div><b>Port T1</b><br><small>$87.91 (Доход: $3.40/ден)</small></div>
+            <button onclick="window.location.href='https://t.me/powerpal_bulgaria'" style="background:black; color:white; border:none; padding:10px; border-radius:8px;">КУПИ</button>
+        </div>
+        
+        <p style="margin-top:20px; font-size:12px; color:#888;">Вашият реф. линк:</p>
+        <div id="reflink" style="font-size:10px; background:#262626; padding:10px; border-radius:5px;"></div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCugN57R0Xm4Q-2g00aJ0-GxX95A8v07AA",
+            authDomain: "powerpall.firebaseapp.com",
+            projectId: "powerpall",
+            databaseURL: "https://powerpall-default-rtdb.europe-west1.firebasedatabase.app",
+            appId: "1:334776969049:web:7dd2593654b445e75f8e48"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        function login() {
+            const p = document.getElementById('phone').value;
+            const pw = document.getElementById('pass').value;
+            if(p.length < 9) return alert("Грешен номер");
+
+            const userRef = db.ref('users/' + p);
+            userRef.once('value', snap => {
+                if(!snap.exists()) {
+                    const code = Math.random().toString(36).substring(7);
+                    userRef.set({ phone:p, pass:pw, balance:0, refCode:code }).then(() => start(p));
+                } else {
+                    if(snap.val().pass === pw) start(p);
+                    else alert("Грешна парола");
+                }
+            });
+        }
+
+        function start(p) {
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            db.ref('users/' + p).on('value', snap => {
+                document.getElementById('bal').innerText = "$" + snap.val().balance.toFixed(2);
+                document.getElementById('reflink').innerText = window.location.href.split('?')[0] + "?ref=" + snap.val().refCode;
+            });
+        }
+    </script>
+</body>
+</html>
